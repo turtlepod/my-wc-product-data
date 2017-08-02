@@ -36,6 +36,7 @@ class MyWC_PData {
 
 		// Add panels.
 		add_action( 'woocommerce_product_data_panels', function() {
+			global $product_object;
 			?>
 			<div id="my_test_data" class="panel woocommerce_options_panel">
 
@@ -43,7 +44,7 @@ class MyWC_PData {
 					'id'                => '_my_test_data',
 					'label'             => 'Test Input',
 					'description'       => 'Lorem Ipsum',
-					'value'             => get_post_meta( get_the_id(), '_my_test_data', true ),
+					'value'             => $product_object->get_my_test_data( 'edit' ),
 					'placeholder'       => '',
 					'type'              => 'text',
 				) ); ?>
@@ -53,9 +54,11 @@ class MyWC_PData {
 		} );
 
 		// Save.
-		add_action( 'woocommerce_process_product_meta', function( $post_id, $post ) {
+		add_action( 'woocommerce_admin_process_product_object', function( $product ) {
 			if ( isset( $_POST['_my_test_data'] ) ) {
-				update_post_meta( $post_id, '_my_test_data', $_POST['_my_test_data'] );
+				$product->set_props( array(
+					'my_test_data' => $_POST['_my_test_data'],
+				) );
 			}
 		}, 10, 2 );
 	}
