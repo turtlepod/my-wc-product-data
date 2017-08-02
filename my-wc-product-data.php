@@ -8,7 +8,7 @@
  * Author URI: https://shellcreeper.com
  * Requires at least: 4.8.0
  * Tested up to: 4.8
-**/
+ **/
 
 define( 'MWPD_PATH', trailingslashit( plugin_dir_path( __FILE__ ) ) );
 define( 'MWPD_URL', trailingslashit( plugin_dir_url( __FILE__ ) ) );
@@ -35,9 +35,8 @@ add_action( 'plugins_loaded', function() {
  * @return string $product_type
  */
 function custom_woocommerce_product_type_query( $override, $product_id ) {
-  // $location = query_custom_table_for_location_data_row( $product_id );
-
-  return 'custom';
+	// Do a proper check to see if we are really a custom type.
+	return 1 === 1 ? 'custom' : $override;
 }
 add_filter( 'woocommerce_product_type_query', 'custom_woocommerce_product_type_query', 10, 2 );
 
@@ -53,16 +52,11 @@ add_filter( 'woocommerce_product_type_query', 'custom_woocommerce_product_type_q
  * @param int $product_id
  * @return string $classname
  */
-function custom_woocommerce_product_class( $classname, $product_type ) {
-  // Would need to do a few extra checks here for saving data in the admin while maintaining
-  // the simple product type.
-  //
-  // if ( 'custom' == $product_type ) {
-  //   return 'My_Product_Custom';
-  // }
+function custom_woocommerce_product_class( $classname, $product_type, $post_type, $product_id ) {
+	if ( 'custom' == $product_type ) {
+		return 'My_Product_Custom';
+	}
 
-  return 'My_Product_Custom';
-
-  return $classname;
+	return $classname;
 }
-add_filter( 'woocommerce_product_class', 'custom_woocommerce_product_class', 10, 2 );
+add_filter( 'woocommerce_product_class', 'custom_woocommerce_product_class', 10, 4 );
