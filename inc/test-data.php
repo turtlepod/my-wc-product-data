@@ -39,7 +39,7 @@ class MyWC_PData {
 			global $product_object;
 			?>
 			<div id="my_test_data" class="panel woocommerce_options_panel">
-
+				<?php print_r( $product_object->get_type() ); ?>
 				<?php woocommerce_wp_text_input( array(
 					'id'                => '_my_test_data',
 					'label'             => 'Test Input',

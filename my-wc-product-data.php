@@ -23,6 +23,11 @@ add_action( 'plugins_loaded', function() {
 	require_once( MWPD_PATH . 'inc/product.php' );
 } );
 
+function is_custom_product() {
+	// We would query against our custom table for data.
+	return 1 === 1;
+}
+
 /**
  * Override the product type lookup.
  *
@@ -36,7 +41,7 @@ add_action( 'plugins_loaded', function() {
  */
 function custom_woocommerce_product_type_query( $override, $product_id ) {
 	// Do a proper check to see if we are really a custom type.
-	return 1 === 1 ? 'custom' : $override;
+	return is_custom_product() ? 'custom' : $override;
 }
 add_filter( 'woocommerce_product_type_query', 'custom_woocommerce_product_type_query', 10, 2 );
 
@@ -53,9 +58,11 @@ add_filter( 'woocommerce_product_type_query', 'custom_woocommerce_product_type_q
  * @return string $classname
  */
 function custom_woocommerce_product_class( $classname, $product_type, $post_type, $product_id ) {
-	if ( 'custom' == $product_type ) {
+	if ( 'custom' == $product_type || is_custom_product() ) {
 		return 'My_Product_Custom';
 	}
+
+	wp_die( print_r( $product_type ) );
 
 	return $classname;
 }
