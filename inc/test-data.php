@@ -23,6 +23,42 @@ class MyWC_PData {
 	 */
 	public function __construct() {
 
+		/**
+		 * Override the product type lookup.
+		 *
+		 * If we can find a row in our custom table with the same product then we can adjust the type.
+		 *
+		 * @since 1.0.0
+		 *
+		 * @param bool
+		 * @param int $product_id
+		 * @return string $product_type
+		 */
+		add_filter( 'woocommerce_product_type_query', function( $override, $product_id ) {
+			// Do a proper check to see if we are really a custom type.
+			return self::is_custom_product() ? 'custom' : $override;
+		}, 10, 2 );
+
+		/**
+		 * When using the WC_Product_Factory ensure our custom product class
+		 * is used if applicable. 
+		 *
+		 * @since 1.0.0
+		 *
+		 * @param string $classname
+		 * @param string $product_type
+		 * @param string $post_type
+		 * @param int $product_id
+		 * @return string $classname
+		 */
+		add_filter( 'woocommerce_product_class', function( $classname, $product_type, $post_type, $product_id ) {
+			if ( 'custom' == $product_type || self::is_custom_product() ) {
+				return 'My_Product_Custom';
+			}
+			//wp_die( print_r( $product_type ) );
+			return $classname;
+		}, 10, 4 );
+
 		// Add tabs.
 		add_filter( 'woocommerce_product_data_tabs', function( $tabs ) {
 			$tabs['test'] = array(
@@ -39,7 +75,7 @@ class MyWC_PData {
 			global $product_object;
 			?>
 			<div id="my_test_data" class="panel woocommerce_options_panel">
-				<?php print_r( $product_object->get_type() ); ?>
+				<?php //print_r( $product_object->get_type() ); ?>
 				<?php woocommerce_wp_text_input( array(
 					'id'                => '_my_test_data',
 					'label'             => 'Test Input',
@@ -61,6 +97,11 @@ class MyWC_PData {
 				) );
 			}
 		}, 10, 2 );
+	}
+
+	public static function is_custom_product() {
+		// We would query against our custom table for data.
+		return 1 === 1;
 	}
 
 }
