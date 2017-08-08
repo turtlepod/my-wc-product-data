@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: My WC Product Data
+ * Plugin Name: My WC Product (TYPE)
  * Plugin URI: https://shellcreeper.com/
- * Description: Just testing CRUD in WC 3.
+ * Description: Just testing WC 3.
  * Version: 1.0.0
  * Author: turtlepod
  * Author URI: https://shellcreeper.com
@@ -10,15 +10,160 @@
  * Tested up to: 4.8
  **/
 
-define( 'MWPD_PATH', trailingslashit( plugin_dir_path( __FILE__ ) ) );
-define( 'MWPD_URL', trailingslashit( plugin_dir_url( __FILE__ ) ) );
+define( 'MWP_PATH', trailingslashit( plugin_dir_path( __FILE__ ) ) );
+define( 'MWP_URL', trailingslashit( plugin_dir_url( __FILE__ ) ) );
 
 add_action( 'plugins_loaded', function() {
-
 	if ( ! class_exists( 'WooCommerce' ) ) {
 		return;
 	}
 
-	require_once( MWPD_PATH . 'inc/test-data.php' );
-	require_once( MWPD_PATH . 'inc/product.php' );
+	/**
+	 * TYPE SELECTOR IN PRODUCT META BOX
+	 */
+	add_filter( 'product_type_selector', function( $types ) {
+		$types['ticket'] = 'Ticket';
+		return $types;
+	} );
+
+	/**
+	 * GENERAL TAB ~ PRODUCT DATA META BOX
+	 */
+	add_action( 'woocommerce_product_options_general_product_data', function() {
+		$product = wc_get_product();
+		?>
+		<div class="options_group show_if_ticket">
+			<?php woocommerce_wp_text_input( array(
+				'id'     => '_address',
+				'label'  => 'Address',
+				'value'  => method_exists( $product, 'get_address' ) ? strip_tags( $product->get_address() ) : '',
+				'type'   => 'text',
+			) ); ?>
+		</div>
+		<?php
+	} );
+
+	/**
+	 * SAVE ADDRESS FIELD
+	 */
+	add_action( 'woocommerce_admin_process_product_object', function( $product ) {
+		$product->set_props( array(
+			'address' => strip_tags( $_POST['_address'] ),
+		) );
+	} );
+
+	/**
+	 * WHICH CLASS TO LOAD FOR A PRODUCT TYPE
+	 */
+	add_filter( 'woocommerce_product_class', function( $classname, $product_type, $post_type, $product_id ) {
+		if ( 'ticket' === $product_type ) {
+			return 'My_Ticket';
+		}
+		return $classname;
+	}, 10, 4 );
+
+	/**
+	 * PRODUCT CLASS: address getter and setter.
+	 */
+	class My_Ticket extends WC_Product_Simple {
+		protected $extra_data = array(
+			'address' => '',
+		);
+		public function __construct( $product = 0 ) {
+			parent::__construct( $product );
+		}
+		// Set type. required.
+		public function get_type() {
+			return 'ticket';
+		}
+		// Setter.
+		public function set_address( $address ) {
+			$a = $this->set_prop( 'address', strip_tags( $address ) );
+		}
+		// Getter.
+		public function get_address() {
+			$a = $this->get_prop( 'address' );
+			return $a;
+		}
+	}
+
+	/**
+	 * WHICH DATA STORES CLASS LOAD FOR TICKET PRODUCT TYPE ?
+	 */
+	add_filter( 'woocommerce_data_stores', function( $stores ) {
+		$stores['product-ticket'] = 'My_Ticket_Data_Store';
+		return $stores;
+	} );
+
+	/**
+	 * DATA STORES CLASS : insert and update to custom DB.
+	 */
+	class My_Ticket_Data_Store extends WC_Product_Data_Store_CPT implements WC_Product_Data_Store_Interface {
+
+		/**
+		 * Update.
+		 */
+		public function update( &$product ) {
+			parent::update( $product );
+
+			// Get db.
+			global $wpdb;
+			$id = $product->get_id();
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}my_tickets WHERE product_id = %d LIMIT 1", $id ), 'ARRAY_A' );
+
+			// Already exists?
+			if ( $row ) {
+				$wpdb->update( "{$wpdb->prefix}my_tickets", array( 'address' => strip_tags( $product->get_address() ), ), array( 'product_id' => $id ) );
+			} else { // Not yet exists for this product.
+				$wpdb->insert( "{$wpdb->prefix}my_tickets", array( 'address' => strip_tags( $product->get_address() ), 'product_id' => $id, ) );
+			}
+
+			// Clear cache.
+			$this->clear_caches( $product );
+		}
+
+		/**
+		 * Create.
+		 */
+		public function create( &$product ) {
+			parent::create( $product );
+
+			// Get db.
+			global $wpdb;
+			$id = $product->get_id();
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}my_tickets WHERE product_id = %d LIMIT 1", $id ), 'ARRAY_A' );
+
+			// Already exists, update (maybe the update is not needed here)
+			if ( $row ) {
+				$wpdb->update( "{$wpdb->prefix}my_tickets", array( 'address' => strip_tags( $product->get_address() ), ), array( 'product_id' => $id ) );
+			} else { // not yet exists.
+				$wpdb->insert( "{$wpdb->prefix}my_tickets", array( 'address' => strip_tags( $product->get_address() ), 'product_id' => $id, ) );
+			}
+
+			// Clear cache.
+			$this->clear_caches( $product );
+		}
+
+	}
+
 } );
+
+
+/**
+ * Install. Create Custom DB.
+ */
+register_activation_hook( __FILE__, function() {
+	global $wpdb;
+	require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+	$charset_collate = $wpdb->get_charset_collate();
+	$sql = "
+		CREATE TABLE {$wpdb->prefix}my_tickets (
+			id int(11) unsigned NOT NULL AUTO_INCREMENT,
+			product_id int(11) NOT NULL,
+			address varchar(255) NOT NULL DEFAULT '',
+			PRIMARY KEY (id)
+		) $charset_collate;
+	";
+	dbDelta( $sql );
+} );
+
