@@ -98,7 +98,19 @@ add_action( 'plugins_loaded', function() {
 	/**
 	 * DATA STORES CLASS : insert and update to custom DB.
 	 */
-	class My_Ticket_Data_Store extends WC_Product_Data_Store_CPT implements WC_Product_Data_Store_Interface {
+	class My_Ticket_Data_Store extends WC_Product_Data_Store_CPT {
+		/**
+		 * Read.
+		 */
+		protected function read_extra_data( &$product ) {
+			parent::read_extra_data( $product );
+
+			global $wpdb;
+			$id = $product->get_id();
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}my_tickets WHERE product_id = %d LIMIT 1", $id ), 'ARRAY_A' );
+
+			$product->set_address( isset( $row['address'] ) ? $row['address'] : '' );
+		}
 
 		/**
 		 * Update.
