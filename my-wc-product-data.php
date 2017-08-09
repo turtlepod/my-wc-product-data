@@ -165,10 +165,14 @@ add_action( 'plugins_loaded', function() {
 			$args = wp_parse_args( $args, array(
 				'force_delete' => false,
 			) );
+
 			if ( $args['force_delete'] ) {
 				global $wpdb;
 				$id = $product->get_id();
-				$wpdb->delete( "{$wpdb->prefix}my_tickets", array( 'product_id' => $id ) );
+				$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}my_tickets WHERE product_id = %d LIMIT 1", $id ), 'ARRAY_A' );
+				if ( $row ) {
+					$wpdb->delete( "{$wpdb->prefix}my_tickets", array( 'product_id' => $id ) );
+				}
 			}
 		}
 
