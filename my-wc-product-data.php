@@ -156,7 +156,34 @@ add_action( 'plugins_loaded', function() {
 			$this->clear_caches( $product );
 		}
 
-	}
+		/**
+		 * Delete
+		 */
+		public function delete( &$product, $args = array() ) {
+			parent::delete( $product, $args );
+
+			$args = wp_parse_args( $args, array(
+				'force_delete' => false,
+			) );
+			if ( $args['force_delete'] ) {
+				global $wpdb;
+				$id = $product->get_id();
+				$wpdb->delete( "{$wpdb->prefix}my_tickets", array( 'product_id' => $id ) );
+			}
+		}
+
+	} // End data store class.
+
+	// Delete product on delete post.
+	add_action( 'deleted_post', function( $id ) {
+		if ( 'product' === get_post_type( $id ) ) {
+			global $wpdb;
+			$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$wpdb->prefix}my_tickets WHERE product_id = %d LIMIT 1", $id ), 'ARRAY_A' );
+			if ( $row ) {
+				$wpdb->delete( "{$wpdb->prefix}my_tickets", array( 'product_id' => $id ) );
+			}
+		}
+	} );
 
 } );
 
